@@ -2,12 +2,9 @@ package spotify
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type SpotifyApp struct {
@@ -33,35 +30,21 @@ func NewSpotifyApp(clientId string, clientSecret string) *SpotifyApp {
 }
 
 func (s *SpotifyApp) GetToken(code string, redirectUrl string) (string, error) {
-	form := url.Values{}
-	form.Add("code", code)
-	form.Add("redirect_uri", redirectUrl)
-	form.Add("grant_type", "authorization_code")
-
-	client := &http.Client{}
-	request, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", err
-	}
-
 	unEncodedAuth := fmt.Sprintf("%s:%s", s.clientId, s.clientSecret)
 	encodedAuth := base64.StdEncoding.EncodeToString([]byte(unEncodedAuth))
-	request.Header.Add("Authorization", fmt.Sprintf("Basic %s", encodedAuth))
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(request)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
 
 	var response GetTokenResp
-	err = json.Unmarshal(body, &response)
+	_, err := resty.New().
+		R().
+		SetFormData(map[string]string{
+			"code":         code,
+			"redirect_url": redirectUrl,
+			"grant_type":   "authorization_code",
+		}).
+		SetResult(&response).
+		SetHeader("Authorization", "Basic "+encodedAuth).
+		Post("https://accounts.spotify.com/api/token")
+
 	if err != nil {
 		return "", err
 	}

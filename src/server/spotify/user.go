@@ -29,7 +29,7 @@ type SpotifyUser struct {
 
 func (s *Spotify) Me() (*SpotifyUser, error) {
 	var me SpotifyUser
-	err := s.get("/me", &me)
+	_, err := s.newRequest().SetResult(&me).Get("/me")
 
 	if err != nil {
 		return nil, err

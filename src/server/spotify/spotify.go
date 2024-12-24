@@ -1,11 +1,9 @@
 package spotify
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/mightynerd/hit/db"
 )
 
@@ -27,39 +25,10 @@ func FromUser(user *db.User) *Spotify {
 	return NewSpotify(*user.Token)
 }
 
-func (s *Spotify) newAPIRequest(method string, path string, body io.Reader) (*http.Request, error) {
-	request, err := http.NewRequest(method, APIURL+path, body)
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.token))
+func (s *Spotify) newRequest() *resty.Request {
+	client := resty.New()
+	client.SetHeader("Authorization", fmt.Sprintf("Bearer %s", s.token))
+	client.BaseURL = APIURL
 
-	return request, nil
-
-}
-
-func (s *Spotify) get(path string, respBody any) error {
-	request, err := s.newAPIRequest("GET", "/me", nil)
-	if err != nil {
-		return err
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(request)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return err
-	}
-
-	if err := json.Unmarshal(body, respBody); err != nil {
-		return err
-	}
-
-	return nil
+	return client.R()
 }

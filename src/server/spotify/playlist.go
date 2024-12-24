@@ -1,10 +1,7 @@
 package spotify
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -109,46 +106,45 @@ type GetPlaylistItemsResponse struct {
 	} `json:"items"`
 }
 
-func (config *Spotify) GetPlaylistItems(playlistId string) (*[]db.Track, error) {
-	client := &http.Client{}
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks?market=SE", playlistId), nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println(fmt.Sprintf("Bearer %s", config.token))
-	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", config.token))
-
-	resp, err := client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var getResponse GetPlaylistItemsResponse
-	if err := json.Unmarshal(body, &getResponse); err != nil {
-		return nil, err
-	}
-
+func (spotify *Spotify) GetPlaylistItems(playlistId string) (*[]db.Track, error) {
 	tracks := []db.Track{}
-	for _, item := range getResponse.Items {
-		yearParseResult, err := parseYear(item.Track.Album.ReleaseDate)
+	limit := 20
+	offset := 0
+
+	for {
+		fmt.Println("Requesting spotify playlist", playlistId, " offset ", offset, " limit ", limit)
+		response := &GetPlaylistItemsResponse{}
+		_, err := spotify.newRequest().
+			SetQueryParam("market", "SE").
+			SetQueryParam("limit", strconv.Itoa(limit)).
+			SetQueryParam("offset", strconv.Itoa(offset)).
+			SetPathParam("playlist_id", playlistId).
+			SetResult(response).
+			Get("/playlists/{playlist_id}/tracks")
+
 		if err != nil {
-			yearParseResult = 0
+			return nil, err
 		}
-		track := db.Track{
-			Title:      item.Track.Name,
-			Artist:     item.Track.Artists[0].Name,
-			Year:       yearParseResult,
-			SpotifyURI: item.Track.URI,
+
+		for _, item := range response.Items {
+			yearParseResult, err := parseYear(item.Track.Album.ReleaseDate)
+			if err != nil {
+				yearParseResult = 0
+			}
+			track := db.Track{
+				Title:      item.Track.Name,
+				Artist:     item.Track.Artists[0].Name,
+				Year:       yearParseResult,
+				SpotifyURI: item.Track.URI,
+			}
+			tracks = append(tracks, track)
 		}
-		tracks = append(tracks, track)
+
+		if offset >= response.Total {
+			break
+		}
+
+		offset += limit
 	}
 
 	return &tracks, nil
