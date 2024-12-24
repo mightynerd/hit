@@ -49,12 +49,12 @@ func (db *DB) GetPlaylists(userId string, page int, size int) (*[]Playlist, erro
 	query := `
 		SELECT * from playlists
 		WHERE user_id = $1
+		ORDER BY created_at DESC
 		OFFSET $2
 		LIMIT $3
-		ORDER BY created_at DESC
 	`
 	var playlists []Playlist
-	err := pgxscan.Select(*db.ctx, db.pool, &playlists, query, userId, page, size)
+	err := pgxscan.Select(*db.ctx, db.pool, &playlists, query, userId, page*size, size)
 
 	if err != nil {
 		fmt.Println("failed to get playlists", err)

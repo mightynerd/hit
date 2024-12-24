@@ -16,6 +16,7 @@ type User struct {
 }
 
 func (db *DB) PutUser(user *User) (userId string, err error) {
+	fmt.Println("putting user", user)
 	query := `
 		INSERT INTO users (spotify_id, name, token)
 		VALUES ($1, $2, $3)

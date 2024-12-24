@@ -58,7 +58,7 @@ func (web *Web) Callback(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get user"})
 		return
 	}
-
+	fmt.Println(me)
 	user := &db.User{
 		Name:      me.DisplayName,
 		SpotifyId: &me.ID,

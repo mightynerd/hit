@@ -67,3 +67,22 @@ func (db *DB) GetUniqueTrack(playlistId string, gameId string) (*Track, error) {
 
 	return &track, nil
 }
+
+func (db *DB) GetTracks(playlistId string, page int, size int) (*[]Track, error) {
+	query := `
+		SELECT * from tracks
+		WHERE playlist_id = $1
+		ORDER BY created_at DESC
+		OFFSET $2
+		LIMIT $3
+	`
+	var tracks []Track
+	err := pgxscan.Select(*db.ctx, db.pool, &tracks, query, playlistId, page*size, size)
+
+	if err != nil {
+		fmt.Println("failed to get tracks", err)
+		return nil, err
+	}
+
+	return &tracks, nil
+}

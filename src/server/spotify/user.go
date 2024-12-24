@@ -1,5 +1,7 @@
 package spotify
 
+import "fmt"
+
 type SpotifyUser struct {
 	Country         string `json:"country"`
 	DisplayName     string `json:"display_name"`
@@ -29,10 +31,14 @@ type SpotifyUser struct {
 
 func (s *Spotify) Me() (*SpotifyUser, error) {
 	var me SpotifyUser
-	_, err := s.newRequest().SetResult(&me).Get("/me")
+	resp, err := s.newRequest().SetResult(&me).Get("/me")
 
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("failed to get me %s", string(resp.Body()))
 	}
 
 	return &me, nil

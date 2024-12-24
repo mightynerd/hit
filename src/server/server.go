@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/mux"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
 	"github.com/mightynerd/hit/web"
@@ -16,7 +14,6 @@ type Server struct {
 	ctx    *context.Context
 	db     *db.DB
 	config *Config
-	server *http.Server
 }
 
 func (s *Server) ConnectToDb() {
@@ -38,16 +35,9 @@ func main() {
 
 	ctx := context.Background()
 
-	router := mux.NewRouter()
-	httpServer := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
-
 	server := &Server{
 		ctx:    &ctx,
 		config: config,
-		server: httpServer,
 	}
 
 	// Connect to DB
@@ -73,6 +63,7 @@ func main() {
 
 	authorizedGroup.GET("/playlists", web.GetPlaylists)
 	authorizedGroup.POST("/playlists", web.CreatePlaylist)
+	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)
 	authorizedGroup.POST("/games", web.CreateGame)
 	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
 

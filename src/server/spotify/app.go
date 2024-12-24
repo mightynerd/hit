@@ -34,11 +34,11 @@ func (s *SpotifyApp) GetToken(code string, redirectUrl string) (string, error) {
 	encodedAuth := base64.StdEncoding.EncodeToString([]byte(unEncodedAuth))
 
 	var response GetTokenResp
-	_, err := resty.New().
+	resp, err := resty.New().
 		R().
 		SetFormData(map[string]string{
 			"code":         code,
-			"redirect_url": redirectUrl,
+			"redirect_uri": redirectUrl,
 			"grant_type":   "authorization_code",
 		}).
 		SetResult(&response).
@@ -47,6 +47,10 @@ func (s *SpotifyApp) GetToken(code string, redirectUrl string) (string, error) {
 
 	if err != nil {
 		return "", err
+	}
+
+	if resp.StatusCode() != 200 {
+		return "", fmt.Errorf("failed to get token %d %s", resp.StatusCode(), string(resp.Body()))
 	}
 
 	return response.AccessToken, nil
