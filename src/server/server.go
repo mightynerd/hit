@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"sync"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/mux"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
@@ -17,7 +16,6 @@ type Server struct {
 	ctx    *context.Context
 	db     *db.DB
 	config *Config
-	wg     *sync.WaitGroup
 	server *http.Server
 }
 
@@ -57,17 +55,25 @@ func main() {
 
 	discogs := discogs.NewDiscogsConfig(config.DiscogsAPIKey)
 
-	routes := web.NewWeb(server.db, server.config.ServiceUrl, server.config.SpotifyClientId, server.config.SpotifyClientSecret, discogs)
+	web := web.NewWeb(
+		server.db,
+		server.config.ServiceUrl,
+		server.config.SpotifyClientId,
+		server.config.SpotifyClientSecret,
+		discogs,
+		config.JWTSecret)
 
-	router.HandleFunc("/login", routes.Login).Methods("GET")
-	router.HandleFunc("/callback", routes.Callback).Methods("GET")
-	router.Handle("/playlists", routes.AuthMiddleware(http.HandlerFunc(routes.CreatePlaylist))).Methods("POST")
-	router.Handle("/games", routes.AuthMiddleware(http.HandlerFunc(routes.CreateGame))).Methods("POST")
-	router.Handle("/games/{gameId}/next", routes.AuthMiddleware(http.HandlerFunc(routes.AdvanceGame))).Methods("POST")
+	r := gin.Default()
 
-	fmt.Println("Listening on :8080")
-	err := httpServer.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
-	}
+	r.GET("/login", web.Login)
+	r.GET("/callback", web.Callback)
+
+	authorizedGroup := r.Group("")
+	authorizedGroup.Use(web.AuthMiddleware())
+
+	authorizedGroup.POST("/playlists", web.CreatePlaylist)
+	authorizedGroup.POST("/games", web.CreateGame)
+	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
+
+	r.Run(":8080")
 }

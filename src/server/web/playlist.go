@@ -1,11 +1,10 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/library"
 	"github.com/mightynerd/hit/spotify"
@@ -33,29 +32,19 @@ func (web *Web) handleImport(user *db.User, body *CreatePlaylistBody, playlistId
 	return nil
 }
 
-func (web *Web) CreatePlaylist(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		return
-	}
-
-	defer r.Body.Close()
-	rawBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "could not read body", http.StatusInternalServerError)
-		return
-	}
-
+func (web *Web) CreatePlaylist(c *gin.Context) {
 	var body CreatePlaylistBody
-	err = json.Unmarshal(rawBody, &body)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad request"})
+	}
 
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "failed to parse body", http.StatusBadRequest)
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing user"})
 		return
 	}
 
-	user := r.Context().Value(userContextKey).(*db.User)
+	user := userInterface.(*db.User)
 
 	playlist := &db.Playlist{
 		UserID: user.ID,
@@ -66,21 +55,16 @@ func (web *Web) CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "could not create paylist", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create playlist"})
 		return
 	}
 
 	err = web.handleImport(user, &body, playlistId)
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "could not import playlist", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not import playlist"})
 		return
 	}
 
-	response := map[string]string{
-		"playlist_id": playlistId,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	c.JSON(http.StatusOK, gin.H{"playlist_id": playlistId})
 }

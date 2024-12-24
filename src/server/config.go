@@ -12,6 +12,7 @@ type Config struct {
 	SpotifyClientSecret string `json:"spotify_client_secret"`
 	ServiceUrl          string `json:"service_url"`
 	DiscogsAPIKey       string `json:"discogs_api_key"`
+	JWTSecret           string `json:"jwt_secret"`
 }
 
 func LoadConfig(file string) *Config {

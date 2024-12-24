@@ -1,51 +1,38 @@
 package web
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/game"
 	"github.com/mightynerd/hit/spotify"
 )
 
 type CreateGameBody struct {
-	PlaylistId string `json:"playlist_id"`
+	PlaylistId string `json:"playlist_id" binding:"required"`
 }
 
-func (web *Web) CreateGame(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		return
-	}
-
-	defer r.Body.Close()
-	rawBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "could not read body", http.StatusInternalServerError)
-		return
-	}
-
+func (web *Web) CreateGame(c *gin.Context) {
 	var body CreateGameBody
-	err = json.Unmarshal(rawBody, &body)
-
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "failed to parse body", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	user := r.Context().Value(userContextKey).(*db.User)
 
 	playlist, err := web.db.GetPlaylistById(body.PlaylistId)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "failed to get playlist", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
 		return
 	}
+
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing user"})
+		return
+	}
+
+	user := userInterface.(*db.User)
 
 	game := &db.Game{
 		UserID:     user.ID,
@@ -55,33 +42,32 @@ func (web *Web) CreateGame(w http.ResponseWriter, r *http.Request) {
 	gameId, err := web.db.CreateGame(game)
 
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "could not create game", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create game"})
 		return
 	}
 
-	response := map[string]string{
-		"game_id": gameId,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	c.JSON(http.StatusOK, gin.H{"game_id": gameId})
 }
 
-func (web *Web) AdvanceGame(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	gameId := vars["gameId"]
-	user := r.Context().Value(userContextKey).(*db.User)
+func (web *Web) AdvanceGame(c *gin.Context) {
+	gameId := c.Param("game_id")
+
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing user"})
+		return
+	}
+
+	user := userInterface.(*db.User)
 
 	dbGame, err := web.db.GetGameById(gameId)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "failed to get game", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get game"})
 		return
 	}
 
 	if dbGame.UserID != user.ID {
-		http.Error(w, "game not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Game not found"})
 		return
 	}
 
@@ -91,11 +77,9 @@ func (web *Web) AdvanceGame(w http.ResponseWriter, r *http.Request) {
 	track, err := game.Advance()
 
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "could not advance game", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not advance game"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(track)
+	c.JSON(http.StatusOK, track)
 }

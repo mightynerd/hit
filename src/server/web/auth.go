@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/spotify"
 )
@@ -12,17 +13,18 @@ func (web *Web) getRedirectURL() string {
 	return web.serviceURL + "/callback"
 }
 
-func (web *Web) Login(w http.ResponseWriter, req *http.Request) {
+func (web *Web) getLoginURL() string {
 	url := "https://accounts.spotify.com/authorize?"
 	url += "response_type=code&"
 	url += "client_id=" + web.spotifyClientId + "&"
 	url += "scope=user-modify-playback-state playlist-read-private playlist-read-collaborative&"
 	url += "redirect_uri=" + web.getRedirectURL() + "&"
 	url += "state=123"
+	return url
+}
 
-	if req.Method == "GET" {
-		http.Redirect(w, req, url, http.StatusSeeOther)
-	}
+func (web *Web) Login(c *gin.Context) {
+	c.Redirect(http.StatusSeeOther, web.getLoginURL())
 }
 
 func (web *Web) getAccessToken(code string) (string, error) {
@@ -32,22 +34,20 @@ func (web *Web) getAccessToken(code string) (string, error) {
 	return token, err
 }
 
-func (web *Web) Callback(w http.ResponseWriter, req *http.Request) {
-	code := req.URL.Query().Get("code")
-	state := req.URL.Query().Get("state")
-	qerror := req.URL.Query().Get("error")
+func (web *Web) Callback(c *gin.Context) {
+	code := c.Query("code")
+	//state := c.Query("state")
+	qerror := c.Query("error")
 
 	if len(qerror) > 0 {
-		fmt.Printf("Received error: %s", qerror)
-		http.Error(w, qerror, http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Callback failed " + qerror})
 		return
 	}
 
-	fmt.Printf("Code: %s, State: %s", code, state)
 	token, err := web.getAccessToken(code)
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "Could not get access token", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get access token"})
 		return
 	}
 
@@ -55,7 +55,7 @@ func (web *Web) Callback(w http.ResponseWriter, req *http.Request) {
 	me, err := s.Me()
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "Could not get user", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get user"})
 		return
 	}
 
@@ -68,15 +68,16 @@ func (web *Web) Callback(w http.ResponseWriter, req *http.Request) {
 	id, err := web.db.PutUser(user)
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "Could not create user", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
 		return
 	}
 
 	jwt, err := web.createSignedUserJWT(id)
 	if err != nil {
 		fmt.Println(err)
-		http.Error(w, "Could not sign JWT", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Faild to sign JWT"})
+		return
 	}
 
-	fmt.Fprintf(w, jwt)
+	c.JSON(http.StatusOK, gin.H{"token": jwt})
 }

@@ -1,12 +1,12 @@
 package web
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -53,17 +53,17 @@ type contextKey string
 
 const userContextKey = contextKey("user")
 
-func (web *Web) AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+func (web *Web) AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			http.Error(w, "Missing auth header", http.StatusUnauthorized)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing auth header"})
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Invalid auth header format", http.StatusUnauthorized)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth header format"})
 			return
 		}
 
@@ -71,17 +71,17 @@ func (web *Web) AuthMiddleware(next http.Handler) http.Handler {
 
 		userId, err := web.getUserIdFromJWT(token)
 		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 
 		user, err := web.db.GetUserById(userId)
 		if err != nil {
-			http.Error(w, "Missing user", http.StatusUnauthorized)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing user"})
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userContextKey, &user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+		c.Set("user", &user)
+		c.Next()
+	}
 }
