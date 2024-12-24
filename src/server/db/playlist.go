@@ -8,10 +8,10 @@ import (
 )
 
 type Playlist struct {
-	ID        string    `db:"id"`
-	CreatedAt time.Time `db:"created_at"`
-	Name      string    `db:"name"`
-	UserID    string    `db:"user_id"`
+	ID        string    `db:"id" json:"id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Name      string    `db:"name" json:"name"`
+	UserID    string    `db:"user_id" json:"user_id"`
 }
 
 func (db *DB) CreatePlaylist(playlist *Playlist) (playlistId string, err error) {
@@ -45,35 +45,21 @@ func (db *DB) GetPlaylistById(playlistId string) (playlist Playlist, err error) 
 	return playlist, nil
 }
 
-func (db *DB) GetPlaylists(userId string, page int, size int) (playlists *[]Playlist, err error) {
+func (db *DB) GetPlaylists(userId string, page int, size int) (*[]Playlist, error) {
 	query := `
 		SELECT * from playlists
 		WHERE user_id = $1
 		OFFSET $2
 		LIMIT $3
+		ORDER BY created_at DESC
 	`
+	var playlists []Playlist
+	err := pgxscan.Select(*db.ctx, db.pool, &playlists, query, userId, page, size)
 
-	rows, err := db.pool.Query(*db.ctx, query, userId, page*size, size)
 	if err != nil {
-		fmt.Println(err)
-		return nil, fmt.Errorf("unable to get playlists")
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		p := new(Playlist)
-		err := rows.Scan(&p.ID, &p.CreatedAt, &p.Name, &p.UserID)
-		if err != nil {
-			fmt.Println(err)
-			return nil, fmt.Errorf("unable to scan playlists")
-		}
-		*playlists = append(*playlists, *p)
+		fmt.Println("failed to get playlists", err)
+		return nil, err
 	}
 
-	if rows.Err() != nil {
-		fmt.Println(rows.Err())
-		return nil, fmt.Errorf("unable to get playlists")
-	}
-
-	return playlists, nil
+	return &playlists, nil
 }

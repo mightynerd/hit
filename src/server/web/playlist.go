@@ -68,3 +68,26 @@ func (web *Web) CreatePlaylist(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"playlist_id": playlistId})
 }
+
+func (web *Web) GetPlaylists(c *gin.Context) {
+	qPage, _ := c.GetQuery("page")
+	qSize, _ := c.GetQuery("size")
+	page, size := parsePagination(qPage, qSize, 0, 20)
+
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing user"})
+		return
+	}
+
+	user := userInterface.(*db.User)
+
+	playlists, err := web.db.GetPlaylists(user.ID, page, size)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlists"})
+		return
+	}
+
+	c.JSON(http.StatusOK, playlists)
+}

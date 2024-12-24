@@ -71,6 +71,7 @@ func main() {
 	authorizedGroup := r.Group("")
 	authorizedGroup.Use(web.AuthMiddleware())
 
+	authorizedGroup.GET("/playlists", web.GetPlaylists)
 	authorizedGroup.POST("/playlists", web.CreatePlaylist)
 	authorizedGroup.POST("/games", web.CreateGame)
 	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
