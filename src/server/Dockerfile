@@ -23,6 +23,9 @@ WORKDIR /app
 # Copy the binary from the builder image
 COPY --from=builder /app/hit .
 
+# Copy migrations
+COPY --from=build /app/db/migrations ./db/migrations
+
 # Expose port (if your application listens on a port)
 EXPOSE 8080
 
