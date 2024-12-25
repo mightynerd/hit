@@ -10,20 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func (web *Web) createSignedUserJWT(userId string) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": userId,
-		"exp": time.Now().Add(time.Hour).Unix(),
-		"iat": time.Now(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, err := token.SignedString(web.jwtSecret)
-	return tokenString, err
-}
-
-func (web *Web) getUserIdFromJWT(tokenString string) (string, error) {
+func (web *Web) parseAndValidateJWT(tokenString string) (*jwt.Token, bool) {
 	parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("invalid jwt signing alg")
@@ -33,10 +20,59 @@ func (web *Web) getUserIdFromJWT(tokenString string) (string, error) {
 	})
 
 	if err != nil {
-		return "", err
+		return nil, false
 	}
 
 	if !parsedToken.Valid {
+		return nil, false
+	}
+
+	return parsedToken, true
+}
+
+func (web *Web) signJWT(claims jwt.Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString(web.jwtSecret)
+	return tokenString, err
+}
+
+func (web *Web) createSignedStateJWT(redirectTo string) (string, error) {
+	tokenString, err := web.signJWT(jwt.MapClaims{
+		"redirect_to": redirectTo,
+		"exp":         time.Now().Add(time.Hour).Unix(),
+		"iat":         time.Now(),
+	})
+	return tokenString, err
+}
+
+func (web *Web) getRedirectToFromJWT(tokenString string) (string, error) {
+	parsedToken, valid := web.parseAndValidateJWT(tokenString)
+
+	if !valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	claims := parsedToken.Claims.(jwt.MapClaims)
+	redirectTo := claims["redirect_to"].(string)
+
+	return redirectTo, nil
+}
+
+func (web *Web) createSignedUserJWT(userId string) (string, error) {
+	tokenString, err := web.signJWT(jwt.MapClaims{
+		"sub": userId,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iat": time.Now(),
+	})
+
+	return tokenString, err
+}
+
+func (web *Web) getUserIdFromJWT(tokenString string) (string, error) {
+	parsedToken, valid := web.parseAndValidateJWT(tokenString)
+
+	if !valid {
 		return "", fmt.Errorf("invalid token")
 	}
 
@@ -48,10 +84,6 @@ func (web *Web) getUserIdFromJWT(tokenString string) (string, error) {
 
 	return userId, nil
 }
-
-type contextKey string
-
-const userContextKey = contextKey("user")
 
 func (web *Web) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
