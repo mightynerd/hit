@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mightynerd/hit/db"
@@ -13,18 +14,23 @@ func (web *Web) getRedirectURL() string {
 	return web.serviceURL + "/callback"
 }
 
-func (web *Web) getLoginURL() string {
+func (web *Web) getLoginURL(state string) string {
 	url := "https://accounts.spotify.com/authorize?"
 	url += "response_type=code&"
 	url += "client_id=" + web.spotifyClientId + "&"
 	url += "scope=user-modify-playback-state playlist-read-private playlist-read-collaborative&"
 	url += "redirect_uri=" + web.getRedirectURL() + "&"
-	url += "state=123"
+	url += "state=" + state
 	return url
 }
 
 func (web *Web) Login(c *gin.Context) {
-	c.Redirect(http.StatusSeeOther, web.getLoginURL())
+	redirectTo := c.Query("redirect_to")
+	state, err := web.createSignedStateJWT(redirectTo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign state jwt"})
+	}
+	c.Redirect(http.StatusSeeOther, web.getLoginURL(state))
 }
 
 func (web *Web) getAccessToken(code string) (string, error) {
@@ -36,7 +42,7 @@ func (web *Web) getAccessToken(code string) (string, error) {
 
 func (web *Web) Callback(c *gin.Context) {
 	code := c.Query("code")
-	//state := c.Query("state")
+	state := c.Query("state")
 	qerror := c.Query("error")
 
 	if len(qerror) > 0 {
@@ -79,5 +85,22 @@ func (web *Web) Callback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": jwt})
+	redirectTo, err := web.getRedirectToFromJWT(state)
+	if err != nil || len(redirectTo) < 1 {
+		c.JSON(http.StatusOK, gin.H{"token": jwt})
+		return
+	}
+
+	redirectUrl, err := url.Parse(redirectTo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse redirect url"})
+	}
+
+	query := redirectUrl.Query()
+	query.Set("token", jwt)
+	redirectUrl.RawQuery = query.Encode()
+
+	fmt.Println("Redirecting to", redirectUrl.String())
+
+	c.Redirect(http.StatusSeeOther, redirectUrl.String())
 }
