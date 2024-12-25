@@ -15,7 +15,7 @@ type Config struct {
 	JWTSecret           string `json:"jwt_secret"`
 }
 
-func LoadConfig(file string) *Config {
+func loadConfigFromFile(file string) *Config {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatal("Failed to read config file", err)
@@ -28,4 +28,33 @@ func LoadConfig(file string) *Config {
 	}
 
 	return &config
+}
+
+func getRequiredEnv(name string) string {
+	env := os.Getenv(name)
+	if len(env) < 1 {
+		log.Fatal("Missing env variable", name)
+	}
+	return env
+}
+
+func loadConfigFromEnv() *Config {
+	config := &Config{
+		PGConnectionString:  getRequiredEnv("PG_CONNECTION_STRING"),
+		SpotifyClientId:     getRequiredEnv("SPOTIFY_CLIENT_ID"),
+		SpotifyClientSecret: getRequiredEnv("SPOTIFY_CLIENT_SECRET"),
+		ServiceUrl:          getRequiredEnv("SERVICE_URL"),
+		DiscogsAPIKey:       getRequiredEnv("DISCOGS_API_KEY"),
+		JWTSecret:           getRequiredEnv("JWT_SECRET"),
+	}
+
+	return config
+}
+
+func LoadConfig(file string) *Config {
+	if _, err := os.Stat(file); err == nil {
+		return loadConfigFromFile(file)
+	} else {
+		return loadConfigFromEnv()
+	}
 }
