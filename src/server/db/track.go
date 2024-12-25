@@ -86,3 +86,52 @@ func (db *DB) GetTracks(playlistId string, page int, size int) (*[]Track, error)
 
 	return &tracks, nil
 }
+
+func (db *DB) GetTrackById(trackId string) (*Track, error) {
+	query := `
+		SELECT * FROM tracks
+		WHERE id = $1
+	`
+
+	var track Track
+	err := pgxscan.Get(*db.ctx, db.pool, &track, query, trackId)
+	if err != nil {
+		fmt.Println(err)
+		return nil, fmt.Errorf("unable to get track")
+	}
+
+	return &track, nil
+}
+
+func (db *DB) UpdateTrack(track *Track) (*Track, error) {
+	query := `
+		UPDATE tracks
+		SET title = $2, artist = $3, year = $4
+		WHERE id = $1
+		RETURNING *
+	`
+
+	var updated Track
+	err := pgxscan.Get(*db.ctx, db.pool, &updated, query, track.ID, track.Title, track.Artist, track.Year)
+	if err != nil {
+		fmt.Println("failed to update track", err)
+		return nil, err
+	}
+
+	return &updated, nil
+}
+
+func (db *DB) DeleteTrack(trackId string) error {
+	query := `
+		DELETE FROM tracks
+		WHERE id = $1
+	`
+
+	_, err := db.pool.Query(*db.ctx, query, trackId)
+	if err != nil {
+		fmt.Println("failed to delete track", err)
+		return err
+	}
+
+	return nil
+}

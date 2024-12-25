@@ -64,6 +64,8 @@ func main() {
 	authorizedGroup.GET("/playlists", web.GetPlaylists)
 	authorizedGroup.POST("/playlists", web.CreatePlaylist)
 	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)
+	authorizedGroup.PATCH("/playlists/:playlist_id/tracks/:track_id", web.UpdateTrack)
+	authorizedGroup.DELETE("/playlists/:playlist_id/tracks/:track_id", web.DeleteTrack)
 	authorizedGroup.POST("/games", web.CreateGame)
 	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
 
