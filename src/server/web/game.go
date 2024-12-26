@@ -46,7 +46,7 @@ func (web *Web) CreateGame(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"game_id": gameId})
+	c.JSON(http.StatusOK, gin.H{"id": gameId})
 }
 
 func (web *Web) AdvanceGame(c *gin.Context) {

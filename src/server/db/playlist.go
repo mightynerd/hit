@@ -63,3 +63,18 @@ func (db *DB) GetPlaylists(userId string, page int, size int) (*[]Playlist, erro
 
 	return &playlists, nil
 }
+
+func (db *DB) DeletePlaylist(playlistId string) error {
+	query := `
+		DELETE FROM playlists
+		WHERE id = $1
+	`
+
+	_, err := db.pool.Query(*db.ctx, query, playlistId)
+	if err != nil {
+		fmt.Println("failed to delete playlist", err)
+		return err
+	}
+
+	return nil
+}

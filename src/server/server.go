@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
@@ -55,17 +56,26 @@ func main() {
 
 	r := gin.Default()
 
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
+	corsConfig.AllowCredentials = true
+	corsConfig.AddAllowHeaders("Authorization")
+	r.Use(cors.New(corsConfig))
+
 	r.GET("/login", web.Login)
 	r.GET("/callback", web.Callback)
 
 	authorizedGroup := r.Group("")
-	authorizedGroup.Use(web.AuthMiddleware())
 
+	authorizedGroup.Use(web.AuthMiddleware())
 	authorizedGroup.GET("/playlists", web.GetPlaylists)
 	authorizedGroup.POST("/playlists", web.CreatePlaylist)
+	authorizedGroup.DELETE("/playlists/:playlist_id", web.DeletePlaylist)
+
 	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)
 	authorizedGroup.PATCH("/playlists/:playlist_id/tracks/:track_id", web.UpdateTrack)
 	authorizedGroup.DELETE("/playlists/:playlist_id/tracks/:track_id", web.DeleteTrack)
+
 	authorizedGroup.POST("/games", web.CreateGame)
 	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
 
