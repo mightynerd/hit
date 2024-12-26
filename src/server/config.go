@@ -13,7 +13,7 @@ type Config struct {
 	ServiceUrl          string `json:"service_url"`
 	DiscogsAPIKey       string `json:"discogs_api_key"`
 	JWTSecret           string `json:"jwt_secret"`
-	AllowOrigin         string `json:"allow_origin`
+	AllowOrigin         string `json:"allow_origin"`
 }
 
 func loadConfigFromFile(file string) *Config {
