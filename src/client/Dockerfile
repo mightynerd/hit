@@ -10,6 +10,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+ARG VITE_BASE_URL
+ENV VITE_BASE_URL=$VITE_BASE_URL
+
 # Copy the rest of your application's code
 COPY . .
 
