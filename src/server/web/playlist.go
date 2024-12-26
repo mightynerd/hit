@@ -66,7 +66,7 @@ func (web *Web) CreatePlaylist(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"playlist_id": playlistId})
+	c.JSON(http.StatusOK, gin.H{"id": playlistId})
 }
 
 func (web *Web) GetPlaylists(c *gin.Context) {
@@ -90,4 +90,34 @@ func (web *Web) GetPlaylists(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, playlists)
+}
+
+func (web *Web) DeletePlaylist(c *gin.Context) {
+	playlistId := c.Param("playlist_id")
+
+	userInterface, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing user"})
+		return
+	}
+	user := userInterface.(*db.User)
+
+	playlist, err := web.db.GetPlaylistById(playlistId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
+		return
+	}
+
+	if user.ID != playlist.UserID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Could not find playlist"})
+		return
+	}
+
+	err = web.db.DeletePlaylist(playlistId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"errors": "Failed to delete playlist"})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
