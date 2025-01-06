@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/mightynerd/hit/db"
 )
@@ -75,7 +75,7 @@ func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string)
 	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.discogs.com/database/search?type=release&artist=%s&track=%s", artist, track), nil)
 
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
 	}
 
 	request.Header.Add("User-Agent", "github.com/mightynerd")
@@ -109,7 +109,7 @@ func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string)
 	}
 
 	if len(years) < 1 {
-		return 0, fmt.Errorf("No results found")
+		return 0, fmt.Errorf("no results found for artist '%s', track '%s'", artist, track)
 	}
 
 	slices.Sort(years)
@@ -118,16 +118,20 @@ func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string)
 }
 
 func (config *DiscogsConfig) EnhanceYears(tracks *([]db.Track)) {
-	for _, track := range *tracks {
+	for i, track := range *tracks {
 		dcYear, err := config.GetEarliestReleaseYear(track.Artist, track.Title)
+		time.Sleep(1 * time.Second)
 		if err != nil {
+			fmt.Println("Enhance error", err)
 			continue
 		}
 
-		fmt.Printf("Track %s, org year %d, dc year %d\n", track.Title, track.Year, dcYear)
+		fmt.Printf("Track '%s', artist '%s', org year %d, dc year %d\n", track.Title, track.Artist, track.Year, dcYear)
 
 		if track.Year > dcYear {
-			track.Year = dcYear
+			fmt.Println("DC year is better for above")
+			(*tracks)[i].Year = dcYear
 		}
+
 	}
 }

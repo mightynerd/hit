@@ -1,31 +1,26 @@
-# Stage 1: Build the application
-FROM node:22-alpine AS builder
+# Use an official Node.js runtime as the base image
+FROM node:22-alpine
 
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package.json and package-lock.json (if available)
 COPY package*.json ./
-RUN npm ci
 
-# Copy the rest of your application code
-COPY . .
+# Install dependencies
+RUN npm install
 
-# Accept build argument and set environment variable
 ARG VITE_BASE_URL
 ENV VITE_BASE_URL=$VITE_BASE_URL
 
-# Build the application
+# Copy the rest of your application's code
+COPY . .
+
+# Build the SvelteKit app
 RUN npm run build
 
-# Stage 2: Serve the application using Nginx
-FROM nginx:alpine
+# Expose the port your app runs on
+EXPOSE 3000
 
-# Copy the build output to Nginx's html directory
-COPY --from=builder /app/build /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
-
-# Start Nginx when the container launches
-CMD ["nginx", "-g", "daemon off;"]
+# Command to run your app
+CMD ["node", "build"]
