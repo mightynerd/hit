@@ -33,10 +33,10 @@ func (lib *Library) ImportSpotifyPlaylist(playlistId string, spotifyPlaylistId s
 	}
 
 	fmt.Println("Got", len(*tracks), "tracks, enhancing with discogs")
-	lib.discogs.EnhanceYears(tracks)
 
 	fmt.Println("Inserting into db")
 	for _, track := range *tracks {
+		lib.discogs.EnhanceYear(&track)
 		track.PlaylistID = playlistId
 		_, err := lib.db.CreateTrack(&track)
 		if err != nil {
