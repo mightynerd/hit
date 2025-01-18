@@ -25,10 +25,12 @@ func (web *Web) handleImport(user *db.User, body *CreatePlaylistBody, playlistId
 		err := lib.ImportSpotifyPlaylist(playlistId, body.From.Id)
 		if err != nil {
 			fmt.Println(err)
+			web.db.UpdatePlaylistStatus(playlistId, db.PlaylistStatusFailed)
 			return err
 		}
 	}
 
+	web.db.UpdatePlaylistStatus(playlistId, db.PlaylistStatusActive)
 	return nil
 }
 
@@ -49,6 +51,7 @@ func (web *Web) CreatePlaylist(c *gin.Context) {
 	playlist := &db.Playlist{
 		UserID: user.ID,
 		Name:   body.Name,
+		Status: db.PlaylistStatusImporting,
 	}
 
 	playlistId, err := web.db.CreatePlaylist(playlist)
@@ -59,14 +62,9 @@ func (web *Web) CreatePlaylist(c *gin.Context) {
 		return
 	}
 
-	err = web.handleImport(user, &body, playlistId)
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not import playlist"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{"id": playlistId})
+
+	go web.handleImport(user, &body, playlistId)
 }
 
 func (web *Web) GetPlaylists(c *gin.Context) {

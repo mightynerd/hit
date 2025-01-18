@@ -2,6 +2,9 @@ import axios, { AxiosError } from 'axios';
 import type { Playlist, Track } from './types';
 import { BASE_URL } from './consts';
 import { redirectToLogin } from './auth';
+import { writable } from 'svelte/store';
+
+export const errorStore = writable(null);
 
 const client = axios.create({
 	baseURL: BASE_URL
@@ -20,9 +23,16 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
 	(resp) => resp,
 	(err) => {
-		if (err instanceof AxiosError && err.response?.status === 401) {
+		if (!(err instanceof AxiosError)) {
+			throw err;
+		}
+
+		if (err.response?.status === 401) {
 			localStorage.removeItem('token');
 			redirectToLogin();
+		} else {
+			const errorMessage = err.response?.data?.error || 'An unknown error occured';
+			errorStore.set(errorMessage);
 		}
 
 		throw err;

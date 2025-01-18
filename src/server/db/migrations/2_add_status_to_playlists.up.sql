@@ -1,0 +1,2 @@
+ALTER TABLE playlists
+ADD COLUMN status TEXT NOT NULL DEFAULT 'active';

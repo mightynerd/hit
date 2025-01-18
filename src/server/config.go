@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 )
@@ -55,8 +56,10 @@ func loadConfigFromEnv() *Config {
 
 func LoadConfig(file string) *Config {
 	if _, err := os.Stat(file); err == nil {
+		fmt.Println("Reading config from file", file)
 		return loadConfigFromFile(file)
 	} else {
+		fmt.Println("Reading config from env")
 		return loadConfigFromEnv()
 	}
 }

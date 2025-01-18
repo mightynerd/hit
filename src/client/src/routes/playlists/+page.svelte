@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { ensureToken } from '../../lib/auth';
 	import * as requests from '../../lib/axios';
 	import type { Playlist } from '../../lib/types';
@@ -8,14 +8,34 @@
 	let playlists: Playlist[];
 	let isCreateModelOpen = false;
 
+	let periodicRefreshInterval: number | null;
+
+	const isSomePlaylistImporting = (): boolean => {
+		return playlists.some((playlist) => playlist.status === 'importing');
+	};
+
 	const fetchPlaylists = async () => {
 		const result = await requests.getPlaylists();
 		playlists = result;
+
+		console.log({ periodicRefreshInterval });
+
+		if (isSomePlaylistImporting() && !periodicRefreshInterval) {
+			periodicRefreshInterval = setInterval(() => fetchPlaylists(), 2000);
+		} else if (!isSomePlaylistImporting() && periodicRefreshInterval) {
+			clearInterval(periodicRefreshInterval);
+		}
 	};
 
 	onMount(() => {
 		ensureToken();
 		fetchPlaylists();
+	});
+
+	onDestroy(() => {
+		if (periodicRefreshInterval) {
+			clearInterval(periodicRefreshInterval);
+		}
 	});
 
 	const onPlaylistCreated = async () => {
@@ -43,6 +63,7 @@
 					<tr>
 						<th>Name</th>
 						<th>Created</th>
+						<th>Status</th>
 						<th></th>
 					</tr>
 				</thead>
@@ -52,6 +73,12 @@
 						<tr>
 							<td data-label="Name"><a href="/playlists/{playlist.id}">{playlist.name}</a></td>
 							<td data-label="Created">{playlist.created_at}</td>
+							<td data-label="Status">
+								{#if playlist.status === 'importing'}
+									<div class="spinner"></div>
+								{/if}
+								{playlist.status}
+							</td>
 							<td data-label=""
 								><button class="secondary" onclick={() => deletePlaylist(playlist.id)}
 									>Delete</button

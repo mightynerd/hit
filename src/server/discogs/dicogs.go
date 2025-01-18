@@ -118,20 +118,26 @@ func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string)
 }
 
 func (config *DiscogsConfig) EnhanceYears(tracks *([]db.Track)) {
-	for i, track := range *tracks {
-		dcYear, err := config.GetEarliestReleaseYear(track.Artist, track.Title)
-		time.Sleep(1 * time.Second)
-		if err != nil {
-			fmt.Println("Enhance error", err)
-			continue
-		}
-
-		fmt.Printf("Track '%s', artist '%s', org year %d, dc year %d\n", track.Title, track.Artist, track.Year, dcYear)
-
-		if track.Year > dcYear {
-			fmt.Println("DC year is better for above")
-			(*tracks)[i].Year = dcYear
-		}
+	for i := range *tracks {
+		config.EnhanceYear(&(*tracks)[i])
 
 	}
+}
+
+func (config *DiscogsConfig) EnhanceYear(track *db.Track) error {
+	dcYear, err := config.GetEarliestReleaseYear(track.Artist, track.Title)
+	time.Sleep(1 * time.Second)
+	if err != nil {
+		fmt.Println("Enhance error", err)
+		return err
+	}
+
+	fmt.Printf("Track '%s', artist '%s', org year %d, dc year %d\n", track.Title, track.Artist, track.Year, dcYear)
+
+	if track.Year > dcYear {
+		fmt.Println("DC year is better for above")
+		(*track).Year = dcYear
+	}
+
+	return nil
 }

@@ -3,6 +3,7 @@ export type Playlist = {
 	created_at: string;
 	name: string;
 	user_id: string;
+	status: 'active' | 'importing' | 'failed';
 };
 
 export type Track = {
