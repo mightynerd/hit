@@ -2,39 +2,41 @@ package web
 
 import (
 	"crypto/sha512"
-	"fmt"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
 )
 
 type Web struct {
-	db                  *db.DB
-	serviceURL          string
-	spotifyClientId     string
-	spotifyClientSecret string
-	jwtSecret           []byte
-	discogs             *discogs.DiscogsConfig
+	API                 huma.API
+	DB                  *db.DB
+	ServiceURL          string
+	SpotifyClientId     string
+	SpotifyClientSecret string
+	JWTSecret           []byte
+	Discogs             *discogs.DiscogsConfig
 }
 
 func NewWeb(
+	api huma.API,
 	db *db.DB,
 	serviceURL string,
 	spotifyClientId string,
 	spotifyClientSecret string,
 	discogs *discogs.DiscogsConfig,
-	jwtSecret string) *Web {
-
+	jwtSecret string,
+) *Web {
 	jwtSecretHash := sha512.Sum384([]byte(jwtSecret))
-	fmt.Println(jwtSecret, jwtSecretHash)
 
 	web := &Web{
-		db:                  db,
-		serviceURL:          serviceURL,
-		spotifyClientId:     spotifyClientId,
-		spotifyClientSecret: spotifyClientSecret,
-		discogs:             discogs,
-		jwtSecret:           jwtSecretHash[:],
+		API:                 api,
+		DB:                  db,
+		ServiceURL:          serviceURL,
+		SpotifyClientId:     spotifyClientId,
+		SpotifyClientSecret: spotifyClientSecret,
+		Discogs:             discogs,
+		JWTSecret:           jwtSecretHash[:],
 	}
 
 	return web

@@ -1,0 +1,2 @@
+ALTER TABLE games
+ADD COLUMN status TEXT NOT NULL DEFAULT 'active';

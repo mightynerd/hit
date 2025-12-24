@@ -9,6 +9,10 @@ import (
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
 	"github.com/mightynerd/hit/web"
+	web_playlists "github.com/mightynerd/hit/web/playlists"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 )
 
 type Server struct {
@@ -46,15 +50,29 @@ func main() {
 
 	discogs := discogs.NewDiscogsConfig(config.DiscogsAPIKey)
 
+	r := gin.Default()
+
+	humaConfig := huma.DefaultConfig("hit", "1.0.0")
+	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearerAuth": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "JWT",
+		},
+	}
+	api := humagin.New(r, humaConfig)
+
 	web := web.NewWeb(
+		api,
 		server.db,
 		server.config.ServiceUrl,
 		server.config.SpotifyClientId,
 		server.config.SpotifyClientSecret,
 		discogs,
-		config.JWTSecret)
+		config.JWTSecret,
+	)
 
-	r := gin.Default()
+	web_playlists.RegisterRoutes(web)
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
@@ -67,9 +85,9 @@ func main() {
 
 	authorizedGroup := r.Group("")
 
-	authorizedGroup.Use(web.AuthMiddleware())
-	authorizedGroup.GET("/playlists", web.GetPlaylists)
-	authorizedGroup.POST("/playlists", web.CreatePlaylist)
+	//authorizedGroup.Use(web.AuthMiddleware())
+	//authorizedGroup.GET("/playlists", web.GetPlaylists)
+	//authorizedGroup.POST("/playlists", web.CreatePlaylist)
 	authorizedGroup.DELETE("/playlists/:playlist_id", web.DeletePlaylist)
 
 	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)

@@ -20,7 +20,7 @@ func (web *Web) CreateGame(c *gin.Context) {
 		return
 	}
 
-	playlist, err := web.db.GetPlaylistById(body.PlaylistId)
+	playlist, err := web.DB.GetPlaylistById(body.PlaylistId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
 		return
@@ -39,7 +39,7 @@ func (web *Web) CreateGame(c *gin.Context) {
 		PlaylistID: playlist.ID,
 	}
 
-	gameId, err := web.db.CreateGame(game)
+	gameId, err := web.DB.CreateGame(game)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create game"})
@@ -60,7 +60,7 @@ func (web *Web) AdvanceGame(c *gin.Context) {
 
 	user := userInterface.(*db.User)
 
-	dbGame, err := web.db.GetGameById(gameId)
+	dbGame, err := web.DB.GetGameById(gameId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get game"})
 		return
@@ -72,7 +72,7 @@ func (web *Web) AdvanceGame(c *gin.Context) {
 	}
 
 	spotify := spotify.FromUser(user)
-	game := game.NewGame(spotify, dbGame, web.db)
+	game := game.NewGame(spotify, dbGame, web.DB)
 
 	track, err := game.Advance()
 

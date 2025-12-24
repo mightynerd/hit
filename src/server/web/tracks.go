@@ -22,7 +22,7 @@ func (web *Web) GetTracks(c *gin.Context) {
 
 	user := userInterface.(*db.User)
 
-	playlist, err := web.db.GetPlaylistById(playlistId)
+	playlist, err := web.DB.GetPlaylistById(playlistId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
 		return
@@ -33,7 +33,7 @@ func (web *Web) GetTracks(c *gin.Context) {
 		return
 	}
 
-	tracks, err := web.db.GetTracks(playlist.ID, page, size)
+	tracks, err := web.DB.GetTracks(playlist.ID, page, size)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get tracks"})
@@ -53,13 +53,13 @@ func (web *Web) UpdateTrack(c *gin.Context) {
 	}
 	user := userInterface.(*db.User)
 
-	track, err := web.db.GetTrackById(trackId)
+	track, err := web.DB.GetTrackById(trackId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get track"})
 		return
 	}
 
-	playlist, err := web.db.GetPlaylistById(track.PlaylistID)
+	playlist, err := web.DB.GetPlaylistById(track.PlaylistID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
 		return
@@ -85,7 +85,7 @@ func (web *Web) UpdateTrack(c *gin.Context) {
 		track.Year = body.Year
 	}
 
-	updated, err := web.db.UpdateTrack(track)
+	updated, err := web.DB.UpdateTrack(track)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update track"})
 		return
@@ -104,13 +104,13 @@ func (web *Web) DeleteTrack(c *gin.Context) {
 	}
 	user := userInterface.(*db.User)
 
-	track, err := web.db.GetTrackById(trackId)
+	track, err := web.DB.GetTrackById(trackId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get track"})
 		return
 	}
 
-	playlist, err := web.db.GetPlaylistById(track.PlaylistID)
+	playlist, err := web.DB.GetPlaylistById(track.PlaylistID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get playlist"})
 		return
@@ -121,7 +121,7 @@ func (web *Web) DeleteTrack(c *gin.Context) {
 		return
 	}
 
-	err = web.db.DeleteTrack(trackId)
+	err = web.DB.DeleteTrack(trackId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"errors": "Failed to delete track"})
 		return
