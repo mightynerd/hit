@@ -1,0 +1,2 @@
+ALTER TABLE tracks
+ADD COLUMN enhanced BOOLEAN NOT NULL DEFAULT false;

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/georgysavva/scany/pgxscan"
+	"github.com/georgysavva/scany/v2/pgxscan"
+	"github.com/jackc/pgx/v5"
 )
 
 type Track struct {
@@ -15,6 +16,7 @@ type Track struct {
 	Artist     string    `db:"artist" json:"artist"`
 	Year       int       `db:"year" json:"year"`
 	SpotifyURI string    `db:"spotify_uri" json:"spotify_uri"`
+	Enhanced   bool      `db:"enhanced"`
 }
 
 func (db *DB) CreateTrack(track *Track) (trackId string, err error) {
@@ -38,6 +40,29 @@ func (db *DB) CreateTrack(track *Track) (trackId string, err error) {
 	}
 
 	return trackId, nil
+}
+
+func (db *DB) CreateTracks(tracks []Track) (int64, error) {
+	rows := [][]any{}
+	for _, t := range tracks {
+		rows = append(rows, []any{
+			t.PlaylistID,
+			t.Title,
+			t.Artist,
+			t.Year,
+			t.SpotifyURI,
+			false,
+		})
+	}
+
+	count, err := db.pool.CopyFrom(
+		*db.ctx,
+		pgx.Identifier{"tracks"},
+		[]string{"playlist_id", "title", "artist", "year", "spotify_uri", "enhanced"},
+		pgx.CopyFromRows(rows),
+	)
+
+	return count, err
 }
 
 /*

@@ -44,9 +44,20 @@ func createPlaylist(web *web.Web) func(ctx context.Context, data *CreatePlaylist
 			return nil, huma.Error500InternalServerError("could not create playlist")
 		}
 
-		go handleImport(web, user, data.Body, playlistId)
+		//go handleImport(web, user, data.Body, playlistId)
+		spotify := spotify.FromUser(user)
+		tracks, err := spotify.GetPlaylistItems(data.Body.From.ID)
+		if err != nil {
+			return nil, huma.Error500InternalServerError("failed to initialize import")
+		}
 
-		return nil, nil
+		for i, _ := range *tracks {
+			(*tracks)[i].PlaylistID = playlistId
+		}
+
+		_, err = web.DB.CreateTracks(*tracks)
+
+		return nil, err
 	}
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DB struct {
@@ -13,7 +13,8 @@ type DB struct {
 }
 
 func Connect(ctx context.Context, pgConnectionString string) (*DB, error) {
-	pool, err := pgxpool.Connect(ctx, pgConnectionString)
+	pool, err := pgxpool.New(ctx, pgConnectionString)
+
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect")
 	}
