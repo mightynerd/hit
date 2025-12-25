@@ -1,4 +1,4 @@
-package web_playlists
+package web_tracks
 
 import (
 	"net/http"
@@ -8,9 +8,9 @@ import (
 )
 
 func RegisterRoutes(web *web.Web) {
-	group := huma.NewGroup(web.API, "/playlists")
+	group := huma.NewGroup(web.API, "/playlists/:playlistId/tracks")
 	group.UseMiddleware(web.AuthMiddleware)
-	tags := []string{"Playlists"}
+	tags := []string{"Tracks"}
 
 	huma.Register(group,
 		huma.Operation{
@@ -20,26 +20,26 @@ func RegisterRoutes(web *web.Web) {
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
-		}, getPlaylists(web))
+		}, getTracks(web))
 
 	huma.Register(group,
 		huma.Operation{
-			Method: http.MethodPost,
+			Method: http.MethodPatch,
 			Path:   "",
 			Tags:   tags,
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
-		}, createPlaylist(web))
+		}, updateTrack(web))
 
 	huma.Register(group,
 		huma.Operation{
 			Method: http.MethodDelete,
-			Path:   "/:playlistId",
+			Path:   "/:trackId",
 			Tags:   tags,
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
-		}, deletePlaylist(web))
+		}, deleteTrack(web))
 
 }

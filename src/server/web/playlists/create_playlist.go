@@ -9,6 +9,7 @@ import (
 	"github.com/mightynerd/hit/library"
 	"github.com/mightynerd/hit/spotify"
 	"github.com/mightynerd/hit/web"
+	"github.com/mightynerd/hit/web/web_utils"
 )
 
 type CreatePlaylistReq struct {
@@ -27,9 +28,9 @@ type CreatePlaylistResp struct{}
 
 func createPlaylist(web *web.Web) func(ctx context.Context, data *CreatePlaylistReq) (*CreatePlaylistResp, error) {
 	return func(ctx context.Context, data *CreatePlaylistReq) (*CreatePlaylistResp, error) {
-		user, exists := ctx.Value("user").(*db.User)
-		if !exists {
-			return nil, huma.Error500InternalServerError("missing user")
+		user, err := web_utils.GetUserFromContext(ctx)
+		if err != nil {
+			return nil, err
 		}
 
 		playlist := &db.Playlist{

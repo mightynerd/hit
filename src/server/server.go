@@ -9,7 +9,9 @@ import (
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
 	"github.com/mightynerd/hit/web"
+	web_games "github.com/mightynerd/hit/web/game"
 	web_playlists "github.com/mightynerd/hit/web/playlists"
+	web_tracks "github.com/mightynerd/hit/web/tracks"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humagin"
@@ -73,6 +75,8 @@ func main() {
 	)
 
 	web_playlists.RegisterRoutes(web)
+	web_tracks.RegisterRoutes(web)
+	web_games.RegisterRoutes(web)
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
@@ -82,20 +86,6 @@ func main() {
 
 	r.GET("/login", web.Login)
 	r.GET("/callback", web.Callback)
-
-	authorizedGroup := r.Group("")
-
-	//authorizedGroup.Use(web.AuthMiddleware())
-	//authorizedGroup.GET("/playlists", web.GetPlaylists)
-	//authorizedGroup.POST("/playlists", web.CreatePlaylist)
-	authorizedGroup.DELETE("/playlists/:playlist_id", web.DeletePlaylist)
-
-	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)
-	authorizedGroup.PATCH("/playlists/:playlist_id/tracks/:track_id", web.UpdateTrack)
-	authorizedGroup.DELETE("/playlists/:playlist_id/tracks/:track_id", web.DeleteTrack)
-
-	authorizedGroup.POST("/games", web.CreateGame)
-	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
 
 	r.Run(":8080")
 }

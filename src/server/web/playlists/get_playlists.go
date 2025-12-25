@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/web"
+	"github.com/mightynerd/hit/web/web_utils"
 )
 
 type GetPlaylistsReq struct {
@@ -43,9 +43,9 @@ func PlaylistFromDB(dbPlaylist db.Playlist) Playlist {
 
 func getPlaylists(web *web.Web) func(ctx context.Context, data *GetPlaylistsReq) (*GetPlaylistsResp, error) {
 	return func(ctx context.Context, data *GetPlaylistsReq) (*GetPlaylistsResp, error) {
-		user, exists := ctx.Value("user").(*db.User)
-		if !exists {
-			return nil, huma.Error500InternalServerError("missing user")
+		user, err := web_utils.GetUserFromContext(ctx)
+		if err != nil {
+			return nil, err
 		}
 
 		dbPlaylists, err := web.DB.GetPlaylists(user.ID, data.Page, data.Size)

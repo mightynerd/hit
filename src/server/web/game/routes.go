@@ -1,4 +1,4 @@
-package web_playlists
+package web_games
 
 import (
 	"net/http"
@@ -8,19 +8,9 @@ import (
 )
 
 func RegisterRoutes(web *web.Web) {
-	group := huma.NewGroup(web.API, "/playlists")
+	group := huma.NewGroup(web.API, "/games")
 	group.UseMiddleware(web.AuthMiddleware)
-	tags := []string{"Playlists"}
-
-	huma.Register(group,
-		huma.Operation{
-			Method: http.MethodGet,
-			Path:   "",
-			Tags:   tags,
-			Security: []map[string][]string{
-				{"bearerAuth": {}},
-			},
-		}, getPlaylists(web))
+	tags := []string{"Games"}
 
 	huma.Register(group,
 		huma.Operation{
@@ -30,16 +20,15 @@ func RegisterRoutes(web *web.Web) {
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
-		}, createPlaylist(web))
+		}, createGame(web))
 
 	huma.Register(group,
 		huma.Operation{
-			Method: http.MethodDelete,
-			Path:   "/:playlistId",
+			Method: http.MethodPost,
+			Path:   "/:gameId/advance",
 			Tags:   tags,
 			Security: []map[string][]string{
 				{"bearerAuth": {}},
 			},
-		}, deletePlaylist(web))
-
+		}, advanceGame(web))
 }
