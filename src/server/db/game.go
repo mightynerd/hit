@@ -12,6 +12,7 @@ type Game struct {
 	CreatedAt  time.Time `db:"created_at"`
 	UserID     string    `db:"user_id"`
 	PlaylistID string    `db:"playlist_id"`
+	Status     string    `db:"status"`
 }
 
 func (db *DB) CreateGame(game *Game) (gameID string, err error) {

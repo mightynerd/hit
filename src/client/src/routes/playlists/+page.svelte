@@ -16,7 +16,7 @@
 
 	const fetchPlaylists = async () => {
 		const result = await requests.getPlaylists();
-		playlists = result;
+		playlists = result.data;
 
 		console.log({ periodicRefreshInterval });
 

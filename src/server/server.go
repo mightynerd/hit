@@ -53,6 +53,11 @@ func main() {
 	discogs := discogs.NewDiscogsConfig(config.DiscogsAPIKey)
 
 	r := gin.Default()
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
+	corsConfig.AllowCredentials = true
+	corsConfig.AddAllowHeaders("Authorization")
+	r.Use(cors.New(corsConfig))
 
 	humaConfig := huma.DefaultConfig("hit", "1.0.0")
 	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
@@ -77,12 +82,6 @@ func main() {
 	web_playlists.RegisterRoutes(web)
 	web_tracks.RegisterRoutes(web)
 	web_games.RegisterRoutes(web)
-
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
-	corsConfig.AllowCredentials = true
-	corsConfig.AddAllowHeaders("Authorization")
-	r.Use(cors.New(corsConfig))
 
 	r.GET("/login", web.Login)
 	r.GET("/callback", web.Callback)

@@ -9,7 +9,7 @@
 
 	onMount(async () => {
 		ensureToken();
-		playlists = await requests.getPlaylists();
+		playlists = (await requests.getPlaylists()).data;
 		selectedPlaylistId = playlists[0].id;
 	});
 

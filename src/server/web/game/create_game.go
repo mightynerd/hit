@@ -20,7 +20,7 @@ type CreateGameResp struct {
 }
 
 type CreateGameRespData struct {
-	GameID string `json:"gameId" format:"uuid"`
+	GameID string `json:"id" format:"uuid"`
 }
 
 func createGame(web *web.Web) func(ctx context.Context, data *CreateGameReq) (*CreateGameResp, error) {
