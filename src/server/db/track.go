@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -93,6 +94,38 @@ func (db *DB) GetUniqueTrack(playlistId string, gameId string) (*Track, error) {
 	return &track, nil
 }
 
+func (db *DB) GetTrackToEnhance() (*Track, error) {
+	const query = `
+		SELECT * FROM tracks
+		WHERE enhanced = false
+		ORDER BY created_at ASC
+		LIMIT 1
+	`
+
+	var track Track
+	err := pgxscan.Get(*db.ctx, db.pool, &track, query)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &track, nil
+}
+
+func (db *DB) SetTrackEnhanced(trackId string) error {
+	const query = `
+		UPDATE tracks
+		SET enhanced = true
+		WHERE id = $1
+	`
+
+	_, err := db.pool.Query(*db.ctx, query, trackId)
+	return err
+}
+
 func (db *DB) GetTracks(playlistId string, page int, size int) (*[]Track, error) {
 	query := `
 		SELECT * from tracks
@@ -131,19 +164,39 @@ func (db *DB) GetTrackById(trackId string) (*Track, error) {
 func (db *DB) UpdateTrack(track *Track) (*Track, error) {
 	query := `
 		UPDATE tracks
-		SET title = $2, artist = $3, year = $4
+		SET title = $2, artist = $3, year = $4, enhanced = $5
 		WHERE id = $1
 		RETURNING *
 	`
 
 	var updated Track
-	err := pgxscan.Get(*db.ctx, db.pool, &updated, query, track.ID, track.Title, track.Artist, track.Year)
+	err := pgxscan.Get(*db.ctx, db.pool, &updated, query,
+		track.ID,
+		track.Title,
+		track.Artist,
+		track.Year,
+		track.Enhanced,
+	)
 	if err != nil {
 		fmt.Println("failed to update track", err)
 		return nil, err
 	}
 
 	return &updated, nil
+}
+
+func (db *DB) CountUnenhancedTracks(playlistId string) (int, error) {
+	const query = `
+		SELECT COUNT(*)
+		FROM tracks
+		WHERE playlist_id = $1
+		AND enhanced = false
+	`
+
+	var count int
+	err := pgxscan.Get(*db.ctx, db.pool, &count, query, playlistId)
+
+	return count, err
 }
 
 func (db *DB) DeleteTrack(trackId string) error {

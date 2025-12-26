@@ -12,6 +12,7 @@ import (
 	web_games "github.com/mightynerd/hit/web/game"
 	web_playlists "github.com/mightynerd/hit/web/playlists"
 	web_tracks "github.com/mightynerd/hit/web/tracks"
+	"github.com/mightynerd/hit/worker"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humagin"
@@ -51,6 +52,12 @@ func main() {
 	server.ConnectToDb()
 
 	discogs := discogs.NewDiscogsConfig(config.DiscogsAPIKey)
+
+	updateWorker := worker.UpdateWorker{
+		DB:      *server.db,
+		Discogs: *discogs,
+	}
+	go updateWorker.RunUpdateWorker(ctx)
 
 	r := gin.Default()
 	corsConfig := cors.DefaultConfig()

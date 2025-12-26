@@ -1,14 +1,11 @@
 package discogs
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"slices"
 	"strconv"
-	"time"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/mightynerd/hit/db"
 )
 
@@ -71,31 +68,22 @@ func NewDiscogsConfig(apiKey string) *DiscogsConfig {
 }
 
 func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string) (int, error) {
-	client := &http.Client{}
-	request, err := http.NewRequest("GET", fmt.Sprintf("https://api.discogs.com/database/search?type=release&artist=%s&track=%s", artist, track), nil)
-
-	if err != nil {
-		return 0, err
-	}
-
-	request.Header.Add("User-Agent", "github.com/mightynerd")
-	request.Header.Add("Authorization", fmt.Sprintf("Discogs token=%s", config.apiKey))
-
-	resp, err := client.Do(request)
-	if err != nil {
-		return 0, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return 0, err
-	}
+	client := resty.New()
+	client.SetHeader("User-Agent", "github.com/mightynerd/hit")
+	client.SetHeader("Authorization", fmt.Sprintf("Discogs token=%s", config.apiKey))
 
 	var result DiscogsSearchResults
-	if err := json.Unmarshal(body, &result); err != nil {
+	resp, err := client.R().
+		SetQueryParam("type", "release").
+		SetQueryParam("artist", artist).
+		SetQueryParam("track", track).
+		SetResult(&result).
+		Get("https://api.discogs.com/database/search")
+
+	if resp.StatusCode() != 200 {
+		return 0, fmt.Errorf("response code %d", resp.StatusCode())
+	}
+	if err != nil {
 		return 0, err
 	}
 
@@ -117,16 +105,8 @@ func (config *DiscogsConfig) GetEarliestReleaseYear(artist string, track string)
 	return years[0], nil
 }
 
-func (config *DiscogsConfig) EnhanceYears(tracks *([]db.Track)) {
-	for i := range *tracks {
-		config.EnhanceYear(&(*tracks)[i])
-
-	}
-}
-
 func (config *DiscogsConfig) EnhanceYear(track *db.Track) error {
 	dcYear, err := config.GetEarliestReleaseYear(track.Artist, track.Title)
-	time.Sleep(1 * time.Second)
 	if err != nil {
 		fmt.Println("Enhance error", err)
 		return err
