@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Playlist, Track } from './types';
+import type { Paginated, Playlist, Track } from './types';
 import { BASE_URL } from './consts';
 import { redirectToLogin } from './auth';
 import { writable } from 'svelte/store';
@@ -41,8 +41,8 @@ client.interceptors.response.use(
 
 export default client;
 
-export const getPlaylists = async (): Promise<Playlist[]> => {
-	const resp = await client.get<Playlist[]>('/playlists');
+export const getPlaylists = async (): Promise<Paginated<Playlist>> => {
+	const resp = await client.get<Paginated<Playlist>>('/playlists');
 	return resp.data;
 };
 
@@ -60,8 +60,12 @@ export const createPlaylist = async (name: string, spotifyId: string) => {
 	});
 };
 
-export const getTracks = async (playlistId: string, page = 0, size = 20): Promise<Track[]> => {
-	const resp = await client.get<Track[]>(
+export const getTracks = async (
+	playlistId: string,
+	page = 0,
+	size = 20
+): Promise<Paginated<Track>> => {
+	const resp = await client.get<Paginated<Track>>(
 		`/playlists/${playlistId}/tracks?page=${page}&size=${size}`
 	);
 	return resp.data;
@@ -72,7 +76,7 @@ export const deleteTrack = async (playlistId: string, trackId: string) => {
 };
 
 export const createGame = async (playlistId: string): Promise<{ id: string }> => {
-	const resp = await client.post<{ id: string }>('/games', { playlist_id: playlistId });
+	const resp = await client.post<{ id: string }>('/games', { playlistId });
 	return resp.data;
 };
 

@@ -12,7 +12,12 @@
 	let page = 0;
 
 	const updateTracks = async () => {
-		tracks = await requests.getTracks(playlistId, page, size).catch(() => (tracks = []));
+		try {
+			const getTracksResp = await requests.getTracks(playlistId, page, size);
+			tracks = getTracksResp.data;
+		} catch {
+			tracks = [];
+		}
 	};
 
 	const nextPage = async () => {

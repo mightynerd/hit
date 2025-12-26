@@ -9,6 +9,13 @@ import (
 	"github.com/mightynerd/hit/db"
 	"github.com/mightynerd/hit/discogs"
 	"github.com/mightynerd/hit/web"
+	web_games "github.com/mightynerd/hit/web/game"
+	web_playlists "github.com/mightynerd/hit/web/playlists"
+	web_tracks "github.com/mightynerd/hit/web/tracks"
+	"github.com/mightynerd/hit/worker"
+
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 )
 
 type Server struct {
@@ -46,38 +53,45 @@ func main() {
 
 	discogs := discogs.NewDiscogsConfig(config.DiscogsAPIKey)
 
-	web := web.NewWeb(
-		server.db,
-		server.config.ServiceUrl,
-		server.config.SpotifyClientId,
-		server.config.SpotifyClientSecret,
-		discogs,
-		config.JWTSecret)
+	updateWorker := worker.UpdateWorker{
+		DB:      *server.db,
+		Discogs: *discogs,
+	}
+	go updateWorker.RunUpdateWorker(ctx)
 
 	r := gin.Default()
-
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = []string{"http://localhost:5173", config.AllowOrigin}
 	corsConfig.AllowCredentials = true
 	corsConfig.AddAllowHeaders("Authorization")
 	r.Use(cors.New(corsConfig))
 
+	humaConfig := huma.DefaultConfig("hit", "1.0.0")
+	humaConfig.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearerAuth": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "JWT",
+		},
+	}
+	api := humagin.New(r, humaConfig)
+
+	web := web.NewWeb(
+		api,
+		server.db,
+		server.config.ServiceUrl,
+		server.config.SpotifyClientId,
+		server.config.SpotifyClientSecret,
+		discogs,
+		config.JWTSecret,
+	)
+
+	web_playlists.RegisterRoutes(web)
+	web_tracks.RegisterRoutes(web)
+	web_games.RegisterRoutes(web)
+
 	r.GET("/login", web.Login)
 	r.GET("/callback", web.Callback)
-
-	authorizedGroup := r.Group("")
-
-	authorizedGroup.Use(web.AuthMiddleware())
-	authorizedGroup.GET("/playlists", web.GetPlaylists)
-	authorizedGroup.POST("/playlists", web.CreatePlaylist)
-	authorizedGroup.DELETE("/playlists/:playlist_id", web.DeletePlaylist)
-
-	authorizedGroup.GET("/playlists/:playlist_id/tracks", web.GetTracks)
-	authorizedGroup.PATCH("/playlists/:playlist_id/tracks/:track_id", web.UpdateTrack)
-	authorizedGroup.DELETE("/playlists/:playlist_id/tracks/:track_id", web.DeleteTrack)
-
-	authorizedGroup.POST("/games", web.CreateGame)
-	authorizedGroup.POST("/games/:game_id/advance", web.AdvanceGame)
 
 	r.Run(":8080")
 }

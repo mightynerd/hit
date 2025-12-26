@@ -11,13 +11,13 @@ import (
 )
 
 func (web *Web) getRedirectURL() string {
-	return web.serviceURL + "/callback"
+	return web.ServiceURL + "/callback"
 }
 
 func (web *Web) getLoginURL(state string) string {
 	url := "https://accounts.spotify.com/authorize?"
 	url += "response_type=code&"
-	url += "client_id=" + web.spotifyClientId + "&"
+	url += "client_id=" + web.SpotifyClientId + "&"
 	url += "scope=user-modify-playback-state playlist-read-private playlist-read-collaborative&"
 	url += "redirect_uri=" + web.getRedirectURL() + "&"
 	url += "state=" + state
@@ -34,7 +34,7 @@ func (web *Web) Login(c *gin.Context) {
 }
 
 func (web *Web) getAccessToken(code string) (string, error) {
-	spotifyApp := spotify.NewSpotifyApp(web.spotifyClientId, web.spotifyClientSecret)
+	spotifyApp := spotify.NewSpotifyApp(web.SpotifyClientId, web.SpotifyClientSecret)
 
 	token, err := spotifyApp.GetToken(code, web.getRedirectURL())
 	return token, err
@@ -71,7 +71,7 @@ func (web *Web) Callback(c *gin.Context) {
 		Token:     &token,
 	}
 
-	id, err := web.db.PutUser(user)
+	id, err := web.DB.PutUser(user)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
